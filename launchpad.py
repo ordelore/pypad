@@ -21,16 +21,13 @@
 #  MA 02110-1301, USA.
 #  
 #  
-import sys, pygame, pyaudio, math
+import sys, pygame, pyaudio, math, pygame.midi
 pygame.init()
-PyAudio = pyaudio.PyAudio     #initialize pyaudio
-
 size = width, height = 1500, 800
 SQUARE_EDGE_LENGTH = 80
 PADDING = 20
 ENTIRE_CELL = PADDING + SQUARE_EDGE_LENGTH
 surface = pygame.display.set_mode(size)
-TUNED_FREQUENCY = 440
 RED = (255, 0, 0)
 ORANGE = (255, 165, 0)
 YELLOW = (255, 255, 0)
@@ -41,45 +38,25 @@ BLUE = (0, 0, 255)
 PURPLE = (128, 0, 128)
 WHITE = (255, 255, 255)
 COLOR_PALLETE = (RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE)
-pygame.mixer.init()
-pygame.mixer.pre_init(44100, -16, 1, 1024)
-
-def playSound(FREQUENCY, LENGTH):
-	#See https://en.wikipedia.org/wiki/Bit_rate#Audio
-	BITRATE = 320000     #number of frames per second/frameset.      
-
-	if FREQUENCY > BITRATE:
-		BITRATE = int(FREQUENCY)+100
-	if BITRATE > 100000:
-		BITRATE = 100000
-	NUMBEROFFRAMES = int(BITRATE * LENGTH)
-	print(NUMBEROFFRAMES)
-	print(BITRATE)
-	RESTFRAMES = NUMBEROFFRAMES % BITRATE
-	WAVEDATA = ''    
-
-	#generating wawes
-	for x in range(NUMBEROFFRAMES):
-		WAVEDATA = WAVEDATA+chr(int(math.sin(x/((BITRATE/FREQUENCY)/math.pi))*127+128))    
-	
-	for x in range(RESTFRAMES): 
-		WAVEDATA = WAVEDATA+chr(128)
-	
-	p = PyAudio()
-	stream = p.open(format = p.get_format_from_width(1), channels = 1, rate = BITRATE, output = True)
-	stream.write(WAVEDATA)
-	stream.stop_stream()
-	stream.close()
-	p.terminate()
-
+VELOCITY = 64
+pygame.midi.init()
+port = pygame.midi.get_default_output_id()
+def noteOff(pygameInstrument, notesBeenPressed, note, velocity):
+	if notesBeenPressed:
+		pygameInstrument.note_off(note, velocity)
 def main(args):
+	midi_out = pygame.midi.Output(port, 0)
+	#0 = grand piano
+	midi_out.set_instrument(0)
 	redrawNecessary = True
 	colorIndex = 0
+	notesHaveBeenPressed = False
 	previouslyPressed = (width / (PADDING + SQUARE_EDGE_LENGTH), height / (PADDING + SQUARE_EDGE_LENGTH))
 	while 1:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				pygame.mixer.quit()
+				del midi_out
+				pygame.midi.quit()
 				sys.exit()
 			if event.type == pygame.MOUSEBUTTONUP:
 				redrawNecessary = True
@@ -87,17 +64,19 @@ def main(args):
 		if pygame.mouse.get_pressed()[0] == True:
 				location = (int(pygame.mouse.get_pos()[0] / ENTIRE_CELL), int(pygame.mouse.get_pos()[1] / ENTIRE_CELL))
 				if location != previouslyPressed:
+					noteOff(midi_out, notesHaveBeenPressed, 12 + 5*previouslyPressed[0] + previouslyPressed[1], VELOCITY)
 					previouslyPressed = location
 					pygame.draw.rect(surface, COLOR_PALLETE[colorIndex], pygame.Rect(ENTIRE_CELL*location[0], ENTIRE_CELL*location[1], SQUARE_EDGE_LENGTH, SQUARE_EDGE_LENGTH), 0)
-					playSound(TUNED_FREQUENCY * math.pow(1.05946309436,location[1]+11*location[0]), 0.001)
-				else:
-					playSound(TUNED_FREQUENCY * math.pow(1.05946309436,previouslyPressed[1]+11*previouslyPressed[0]), 0.00001)
+					midi_out.note_on(12 + 5*location[0] + location[1], 64)
+					notesHaveBeenPressed = True
 				colorIndex  = colorIndex + 1
 				colorIndex = colorIndex - len(COLOR_PALLETE) * int(colorIndex / len(COLOR_PALLETE))
 				pygame.display.update()
 				redrawNecessary = False
 				
 		if redrawNecessary == True:
+			noteOff(midi_out, notesHaveBeenPressed, 12 + 5*previouslyPressed[0] + previouslyPressed[1], VELOCITY)
+			notesHaveBeenPressed = False
 			#Draw the squares
 			for a in range(0,width,PADDING + SQUARE_EDGE_LENGTH):
 				for b in range(0,height,PADDING + SQUARE_EDGE_LENGTH):
