@@ -21,13 +21,12 @@
 #  MA 02110-1301, USA.
 #  
 #  
-import sys, pygame, pyaudio, math, pygame.midi
+import sys, pygame, pygame.midi
 pygame.init()
-size = width, height = 1500, 800
+size = width, height = 1000, 700
 SQUARE_EDGE_LENGTH = 80
 PADDING = 20
 ENTIRE_CELL = PADDING + SQUARE_EDGE_LENGTH
-surface = pygame.display.set_mode(size)
 RED = (255, 0, 0)
 ORANGE = (255, 165, 0)
 YELLOW = (255, 255, 0)
@@ -40,11 +39,17 @@ WHITE = (255, 255, 255)
 COLOR_PALLETE = (RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE)
 VELOCITY = 64
 pygame.midi.init()
-port = pygame.midi.get_default_output_id()
 def noteOff(pygameInstrument, notesBeenPressed, note, velocity):
 	if notesBeenPressed:
 		pygameInstrument.note_off(note, velocity)
 def main(args):
+	for port2 in range(0,pygame.midi.get_count()):
+		portInfo = str(pygame.midi.get_device_info(port2)[1])[2:]
+		portInfo = portInfo[:len(portInfo) - 1]
+		print(str(port2) + ": " +  str(portInfo))
+	port = int(input("Enter a number 0 to " + str(port2) + " to select which midi device you want to use: "))
+	if not(0 < port < port2):
+		port = pygame.midi.get_default_output_id()
 	midi_out = pygame.midi.Output(port, 0)
 	#0 = grand piano
 	midi_out.set_instrument(0)
@@ -52,6 +57,7 @@ def main(args):
 	colorIndex = 0
 	notesHaveBeenPressed = False
 	previouslyPressed = (width / (PADDING + SQUARE_EDGE_LENGTH), height / (PADDING + SQUARE_EDGE_LENGTH))
+	surface = pygame.display.set_mode(size)
 	while 1:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -64,10 +70,10 @@ def main(args):
 		if pygame.mouse.get_pressed()[0] == True:
 				location = (int(pygame.mouse.get_pos()[0] / ENTIRE_CELL), int(pygame.mouse.get_pos()[1] / ENTIRE_CELL))
 				if location != previouslyPressed:
-					noteOff(midi_out, notesHaveBeenPressed, 12 + 5*previouslyPressed[0] + previouslyPressed[1], VELOCITY)
+					noteOff(midi_out, notesHaveBeenPressed, 30 + 5*previouslyPressed[0] + previouslyPressed[1], VELOCITY)
 					previouslyPressed = location
 					pygame.draw.rect(surface, COLOR_PALLETE[colorIndex], pygame.Rect(ENTIRE_CELL*location[0], ENTIRE_CELL*location[1], SQUARE_EDGE_LENGTH, SQUARE_EDGE_LENGTH), 0)
-					midi_out.note_on(12 + 5*location[0] + location[1], 64)
+					midi_out.note_on(30 + 5*location[0] + location[1], 64)
 					notesHaveBeenPressed = True
 				colorIndex  = colorIndex + 1
 				colorIndex = colorIndex - len(COLOR_PALLETE) * int(colorIndex / len(COLOR_PALLETE))
@@ -75,7 +81,7 @@ def main(args):
 				redrawNecessary = False
 				
 		if redrawNecessary == True:
-			noteOff(midi_out, notesHaveBeenPressed, 12 + 5*previouslyPressed[0] + previouslyPressed[1], VELOCITY)
+			noteOff(midi_out, notesHaveBeenPressed, 30 + 5*previouslyPressed[0] + previouslyPressed[1], VELOCITY)
 			notesHaveBeenPressed = False
 			#Draw the squares
 			for a in range(0,width,PADDING + SQUARE_EDGE_LENGTH):
