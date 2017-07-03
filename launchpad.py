@@ -23,7 +23,7 @@
 #  
 import sys, pygame, pygame.midi
 pygame.init()
-size = width, height = 1000, 700
+size = width, height = 1500, 700
 SQUARE_EDGE_LENGTH = 80
 PADDING = 20
 ENTIRE_CELL = PADDING + SQUARE_EDGE_LENGTH
@@ -37,22 +37,33 @@ BLUE = (0, 0, 255)
 PURPLE = (128, 0, 128)
 WHITE = (255, 255, 255)
 COLOR_PALLETE = (RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE)
-VELOCITY = 64
+VELOCITY = 127
 pygame.midi.init()
 def noteOff(pygameInstrument, notesBeenPressed, note, velocity):
 	if notesBeenPressed:
 		pygameInstrument.note_off(note, velocity)
 def main(args):
+	port2Offset = 0
+	portDictionary = []
+	#iterates through each possible port so that the user can choose which device to output the sound through
 	for port2 in range(0,pygame.midi.get_count()):
 		portInfo = str(pygame.midi.get_device_info(port2)[1])[2:]
 		portInfo = portInfo[:len(portInfo) - 1]
-		print(str(port2) + ": " +  str(portInfo))
-	port = int(input("Enter a number 0 to " + str(port2) + " to select which midi device you want to use: "))
-	if not(0 < port < port2):
+		if pygame.midi.get_device_info(port2)[3] == 1:
+			print(str(port2 - port2Offset) + ": " +  str(portInfo))
+			portDictionary.append(port2)
+		else:
+			port2Offset += 1
+	port = int(input("Enter a number 0 to " + str(port2 - port2Offset) + " to select which midi device you want to use: "))
+	#sanitizes the input
+	if not(0 <= port <= (len(portDictionary) - 1)):
+		print("Selected device is out of range. Choosing default device intead")
 		port = pygame.midi.get_default_output_id()
+	else:
+		port = portDictionary[port]
 	midi_out = pygame.midi.Output(port, 0)
 	#0 = grand piano
-	midi_out.set_instrument(0)
+	midi_out.set_instrument(81)
 	redrawNecessary = True
 	colorIndex = 0
 	notesHaveBeenPressed = False
@@ -92,6 +103,4 @@ def main(args):
 	return 0
 	
 if __name__ == '__main__':
-    import sys
     sys.exit(main(sys.argv))
-    sample_rate = 44100

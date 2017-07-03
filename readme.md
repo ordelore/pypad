@@ -1,7 +1,7 @@
 This is Python 3
-Requirements: pygame and pyaudio
+Requirements: pygame
 
 Should work without any changes to the code.
 Editing HEIGHT and WIDTH will edit the window size and automatically resize the pygame window upon next start.
-Right now, it only does clicks, but that should be fixed in future releases.
+Requires some sort of midi device, but most computers ahve one built in
 Code licensed under GPL3
